@@ -1,7 +1,7 @@
 {
     "id": "legacy_games",
     "name": "Legacy Games",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "platform": "legacy_games",
     "author": "RobbyRatpoison",
     "launcher": {
@@ -12,7 +12,8 @@
             "url": "https://cdn.legacygames.com/LegacyGamesLauncher/legacy-games-launcher-setup-1.16.7-x64-full.exe",
             "type": "exe",
             "winearch": "win64",
-            "win_version": "win10"
+            "win_version": "win10",
+            "detached_launcher": true
         }
     },
     "source": "github:RobbyRatpoison/playdate-plugin-legacy-games",
