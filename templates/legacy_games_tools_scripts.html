@@ -1,0 +1,24 @@
+async function legacyGamesStartLauncher() {
+    const btn = document.querySelector('button[onclick="legacyGamesStartLauncher()"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+    try {
+        const r = await fetch('/api/legacy_games/start-launcher', { method: 'POST' });
+        const d = await r.json();
+        if (btn) btn.textContent = d.status === 'success' ? 'Started' : (d.message || 'Failed');
+    } catch (e) {
+        if (btn) btn.textContent = 'Failed';
+    } finally {
+        setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Start Launcher'; } }, 3000);
+    }
+}
+
+async function legacyGamesOpenFolder() {
+    const st = document.getElementById('legacy_games-manage-status-folder');
+    try {
+        const r = await fetch('/api/legacy_games/open-folder', { method: 'POST' });
+        const d = await r.json();
+        if (d.status !== 'ok' && st) st.textContent = d.message || 'Failed to open folder';
+    } catch (e) {
+        if (st) st.textContent = 'Network error';
+    }
+}
