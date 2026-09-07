@@ -117,8 +117,17 @@ class LegacyGamesPlugin:
         except Exception as e:
             log.warning(f'Legacy Games resync_installed at startup failed: {e}')
 
+        prefix, _wine_bin, _exe = _find_wine_launcher_config()
+        if prefix:
+            from .watcher import start_legacy_games_watcher
+            try:
+                start_legacy_games_watcher(prefix)
+            except Exception as e:
+                log.warning(f'Legacy Games watcher start failed: {e}')
+
     def on_shutdown(self):
-        pass
+        from .watcher import stop_legacy_games_watcher
+        stop_legacy_games_watcher()
 
     def launch_game(self, appid):
         from .legacy_games import launch_game

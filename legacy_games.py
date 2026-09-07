@@ -215,6 +215,10 @@ def _do_local_sync():
         _fetch_art(appid, game, product)
 
     db.close()
+    try:
+        resync_installed()
+    except Exception as e:
+        log.warning(f'Legacy Games: resync_installed after local sync failed: {e}')
     _sync_state.update({
         'running': False,
         'status': f'Done — {added} added, {updated} already in library.',
