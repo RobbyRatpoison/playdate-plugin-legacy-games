@@ -1,7 +1,7 @@
 {
     "id": "legacy_games",
     "name": "Legacy Games",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "platform": "legacy_games",
     "author": "RobbyRatpoison",
     "launcher": {
@@ -19,7 +19,7 @@
     "source": "github:RobbyRatpoison/playdate-plugin-legacy-games",
     "platform_status": {
         "windows": "untested",
-        "linux": "untested",
+        "linux": "working",
         "mac": "untested"
     }
 }

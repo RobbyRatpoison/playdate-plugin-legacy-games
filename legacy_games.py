@@ -227,6 +227,18 @@ def _do_local_sync():
     log.info(f'Legacy Games local sync complete: {added} added, {updated} existing')
 
 
+def _win_path_to_host(prefix, win_path):
+    """Convert a Windows-style path from the registry (e.g. 'C:\\Program
+    Files\\Legacy Games\\Foo') into the real host filesystem path under the
+    Wine prefix. install_path is read directly by core (os.path.isdir(),
+    xdg-open) for the edit modal's "Open Folder" button -- a raw Windows
+    path there silently fails on Linux since it isn't a real path at all."""
+    if not win_path:
+        return ''
+    rel = win_path.split('C:\\', 1)[-1].replace('\\', os.sep)
+    return os.path.join(prefix, 'drive_c', rel)
+
+
 def resync_installed():
     """Re-check installed-flag/install_path for every Legacy Games entry
     against the configured Wine prefix's registry data. Called at plugin
@@ -237,14 +249,14 @@ def resync_installed():
     reg = _parse_legacy_games_registry(prefix)
     db = get_db()
     rows = db.execute(
-        "SELECT appid, platform_appname, installed FROM games WHERE platform='legacy_games'"
+        "SELECT appid, platform_appname, installed, install_path FROM games WHERE platform='legacy_games'"
     ).fetchall()
     for row in rows:
         entry = reg.get(row['platform_appname'] or '')
         now_installed = 1 if entry else 0
-        if bool(row['installed']) != bool(now_installed):
-            update_game_data(row['appid'], installed=now_installed,
-                             install_path=(entry['inst_dir'] if entry else ''))
+        host_path = _win_path_to_host(prefix, entry['inst_dir']) if entry else ''
+        if bool(row['installed']) != bool(now_installed) or row['install_path'] != host_path:
+            update_game_data(row['appid'], installed=now_installed, install_path=host_path)
     db.close()
 
 
@@ -335,9 +347,8 @@ def launch_game(appid):
     reg_entry = _parse_legacy_games_registry(prefix).get(installer_uuid) if installer_uuid else None
 
     if reg_entry and reg_entry.get('inst_dir') and reg_entry.get('game_exe'):
-        exe_path = os.path.join(prefix, 'drive_c',
-                                 reg_entry['inst_dir'].split('C:\\', 1)[-1].replace('\\', os.sep),
-                                 reg_entry['game_exe'])
+        inst_dir_host = _win_path_to_host(prefix, reg_entry['inst_dir'])
+        exe_path = os.path.join(inst_dir_host, reg_entry['game_exe'])
         if os.path.isfile(exe_path):
             try:
                 from runners.wine import run_in_prefix
@@ -347,7 +358,7 @@ def launch_game(appid):
             except Exception as e:
                 return {'status': 'error', 'message': f'Launch failed: {e}'}
             now = int(time.time())
-            update_game_data(appid, installed=1, install_path=reg_entry['inst_dir'], last_played=now)
+            update_game_data(appid, installed=1, install_path=inst_dir_host, last_played=now)
             return {'status': 'success', 'last_played': now}
 
     # Not installed (or registry/exe missing) -- open the bare Launcher and
@@ -387,15 +398,11 @@ def uninstall_game(appid):
         return {'status': 'error', 'message':
                 'Could not find this game\'s install record. Uninstall it from the Legacy Games Launcher instead.'}
 
-    uninstaller = os.path.join(prefix, 'drive_c',
-                                reg_entry['inst_dir'].split('C:\\', 1)[-1].replace('\\', os.sep),
-                                'Uninstall.exe')
+    inst_dir_host = _win_path_to_host(prefix, reg_entry['inst_dir'])
+    uninstaller = os.path.join(inst_dir_host, 'Uninstall.exe')
     if not os.path.isfile(uninstaller):
         return {'status': 'error', 'message':
                 'Uninstaller not found for this game. Uninstall it from the Legacy Games Launcher instead.'}
-
-    inst_dir_host = os.path.join(prefix, 'drive_c',
-                                  reg_entry['inst_dir'].split('C:\\', 1)[-1].replace('\\', os.sep))
 
     from runners.wine import find_wine_binary
     wine_bin = _launcher_cfg().get('wine_bin', '').strip() or find_wine_binary()
