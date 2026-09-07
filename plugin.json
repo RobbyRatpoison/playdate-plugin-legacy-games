@@ -1,7 +1,8 @@
 {
     "id": "legacy_games",
     "name": "Legacy Games",
-    "version": "0.2.2",
+    "version": "1.0.0",
+    "min_core_version": "1.10.4",
     "platform": "legacy_games",
     "author": "RobbyRatpoison",
     "launcher": {
