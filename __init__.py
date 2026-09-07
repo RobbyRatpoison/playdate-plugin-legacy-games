@@ -111,25 +111,57 @@ class LegacyGamesPlugin:
         return {'status': 'success'}
 
     def on_startup(self):
-        pass
+        from .legacy_games import resync_installed
+        try:
+            resync_installed()
+        except Exception as e:
+            log.warning(f'Legacy Games resync_installed at startup failed: {e}')
 
     def on_shutdown(self):
         pass
+
+    def launch_game(self, appid):
+        from .legacy_games import launch_game
+        return launch_game(appid)
+
+    def uninstall_game(self, appid):
+        from .legacy_games import uninstall_game
+        return uninstall_game(appid)
+
+    def resync_installed(self):
+        from .legacy_games import resync_installed
+        resync_installed()
+
+    def rescrape(self, appid):
+        from .legacy_games import scrape_single
+        return scrape_single(appid) or None
+
+    def js_api(self):
+        return {
+            'uninstall_url':     '/api/legacy_games/uninstall/{appid}',
+            'uninstall_confirm': 'Uninstall this game?\n\n'
+                                  'This runs the game\'s own uninstaller under Wine.',
+            'scrape_url':     '/api/legacy_games/rescrape/{appid}',
+            'scrape_method':  'POST',
+            'store_url':      'https://legacygames.com/product/{slug}/',
+            'store_label':    'View on Legacy Games ↗',
+            'appid_label':    'Legacy Games Product ID:',
+            'sync_label':     'Sync Legacy Games Library',
+        }
 
     def manage_ui(self):
         _prefix, _wine_bin, _exe = _find_wine_launcher_config()
         items = [
             {'type': 'text', 'content':
-                'Legacy Games has no known public ownership/library API -- this plugin currently only '
-                'installs and opens the real Legacy Games Launcher so its actual behavior (login flow, '
-                'local file/API layout) can be observed. Set the Wine binary and prefix below, then use '
-                '"Install launcher" to download and run the real Windows installer under Wine.'},
+                'Legacy Games has no public ownership/library API -- this plugin reads what you '
+                'own straight from the real Launcher\'s own local data once you\'ve signed in there. '
+                'Set the Wine binary and prefix below, then use "Install launcher" to download and '
+                'run the real Windows installer under Wine.'},
             {'type': 'launcher_config'},
         ]
         if _exe:
             items.append({'type': 'text', 'content':
-                          'Legacy Games Launcher is installed. Use "Start Launcher" to open it and sign in '
-                          'through the real app.'})
+                          'Legacy Games Launcher is installed. Use "Start Launcher" to open it and sign in.'})
             items.append({'type': 'button', 'label': 'Start Launcher', 'action': {
                 'type': 'call', 'fn': 'legacyGamesStartLauncher',
             }})
@@ -137,6 +169,16 @@ class LegacyGamesPlugin:
                 'type': 'call', 'fn': 'legacyGamesOpenFolder',
             }})
             items.append({'type': 'status_output', 'key': 'folder'})
+            items.append({'type': 'text', 'content':
+                          'Once signed in, PlayDate can read your owned games straight from the '
+                          "launcher's own local data -- no PlayDate account connection needed. "
+                          'Installing a new game still has to be done from the real Launcher '
+                          '(there is no way to trigger that from here) -- pressing Play on an '
+                          'uninstalled game just opens it for you.'})
+            items.append({'type': 'button', 'label': 'Sync Library from Launcher', 'action': {
+                'type': 'call', 'fn': 'legacyGamesSyncLocal',
+            }})
+            items.append({'type': 'status_output', 'key': 'sync_local'})
 
         return {
             'sections': [
