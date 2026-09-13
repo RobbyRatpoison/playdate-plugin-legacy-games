@@ -242,11 +242,16 @@ def _win_path_to_host(prefix, win_path):
 def resync_installed():
     """Re-check installed-flag/install_path for every Legacy Games entry
     against the configured Wine prefix's registry data. Called at plugin
-    startup and after a backup restore."""
+    startup and after a backup restore.
+
+    Legacy Games all install inside the configured Wine prefix, so a
+    missing/absent prefix means nothing on this platform is installed --
+    fall through with an empty registry so stale installed=1 rows still get
+    cleared (e.g. the prefix was deleted after a game was installed;
+    otherwise the badge and Open Folder disagree forever, since nothing else
+    downgrades the flag)."""
     prefix = _prefix()
-    if not prefix:
-        return
-    reg = _parse_legacy_games_registry(prefix)
+    reg = _parse_legacy_games_registry(prefix) if prefix else {}
     db = get_db()
     rows = db.execute(
         "SELECT appid, platform_appname, installed, install_path FROM games WHERE platform='legacy_games'"
