@@ -284,6 +284,36 @@ def _fetch_art(appid, game, product):
         log.warning(f'Legacy Games: art fetch failed for appid {appid}: {e}')
 
 
+def art_urls(appid):
+    """Legacy Games' own art for core's Artwork Sources "Store" option, from the
+    locally cached catalog: {'vertical': cover, 'horizontal': wide image}. The
+    wide image is only offered when the catalog really has one (the sync above
+    falls back to the vertical cover for it; a cover stretched into a horizontal
+    slot is worse than letting SGDB/Steam supply it)."""
+    db  = get_db()
+    row = db.execute(
+        "SELECT platform_id FROM games WHERE appid = ? AND platform = 'legacy_games'", (appid,)
+    ).fetchone()
+    db.close()
+    state = _load_app_state()
+    if not row or state is None:
+        return {}
+    try:
+        product = _catalog_by_product_id(state).get(int(row['platform_id']))
+    except (TypeError, ValueError):
+        return {}
+    if not product:
+        return {}
+    game   = (product.get('games') or [{}])[0]
+    images = product.get('images') or []
+    urls = {}
+    if game.get('game_coverart'):
+        urls['vertical'] = game['game_coverart']
+    if images and images[0].get('src'):
+        urls['horizontal'] = images[0]['src']
+    return urls
+
+
 # ── Single-game rescrape ─────────────────────────────────────────────────────
 
 def scrape_single(appid):

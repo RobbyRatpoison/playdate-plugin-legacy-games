@@ -145,6 +145,12 @@ class LegacyGamesPlugin:
         from .legacy_games import scrape_single
         return scrape_single(appid) or None
 
+    art_kinds = ('vertical', 'horizontal')   # no icon art in the catalog
+
+    def art_urls(self, appid):
+        from .legacy_games import art_urls
+        return art_urls(appid)
+
     def js_api(self):
         return {
             'uninstall_url':     '/api/legacy_games/uninstall/{appid}',
